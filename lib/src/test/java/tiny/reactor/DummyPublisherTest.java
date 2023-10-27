@@ -89,7 +89,7 @@ public class DummyPublisherTest extends AbstractPublisherTest{
   }
 
   @Test
-  public void shouldThrowsNPEOnNullDiscovery() throws InterruptedException {
+  public void shouldSetNPEOnNullDiscovery() throws InterruptedException {
     DummyPublisher<Long> dummy = new DummyPublisher<>(new Long[]{ null });
     AtomicReference<Throwable> error = new AtomicReference<>();
     CountDownLatch latch = new CountDownLatch(1);
@@ -119,7 +119,7 @@ public class DummyPublisherTest extends AbstractPublisherTest{
     Assertions.assertThat(error.get()).isInstanceOf(NullPointerException.class);
   }
 
-  
+
   @Test
   public void shouldNotBustCallStackWithRecursiveCalls(){
 
