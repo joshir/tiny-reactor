@@ -1,6 +1,6 @@
 package tiny.reactor;
 
-public class DummyPublisher<T> implements Publisher<T>{
+public class DummyPublisher<T> implements Publisher<T> {
   private final T[] arr;
 
   public DummyPublisher(T[] arr) {
@@ -9,12 +9,25 @@ public class DummyPublisher<T> implements Publisher<T>{
 
   @Override
   public void subscribe(Subscriber<? super T> s) {
-    final int[] index = {0};
     s.onSubscribe(new Subscription() {
+      int index = 0;
+      long received = 0l;
+
       @Override
       public void request(long n) {
-        for(int i = 0; i < n && index[0] < arr.length; i++, index[0]++){
-          T t = arr[index[0]];
+        long init = received;
+
+        received += n;
+
+        if (init != 0) {
+          // after the initial request, all other requests are immediately
+          // returned after capturing the number of requested elements
+          return;
+        }
+
+        int i = 0;
+        for (; i < received && index < arr.length; i++, index++) {
+          T t = arr[index];
 
           if (t == null) {
             s.onError(new NullPointerException("element must not be null"));
@@ -24,8 +37,10 @@ public class DummyPublisher<T> implements Publisher<T>{
           s.onNext(t);
         }
 
-        if(index[0] == arr.length)
+        if (index == arr.length)
           s.onComplete();
+
+        received -= i;
       }
 
       @Override

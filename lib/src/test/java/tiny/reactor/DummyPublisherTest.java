@@ -9,7 +9,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class DummyPublisherTest extends AbstractPublisherTest{
+public class DummyPublisherTest extends AbstractPublisherTest {
   @Test
   public void methodCallsInExpectedOrder() throws InterruptedException {
     DummyPublisher<Long> dummy = new DummyPublisher<>(generate(3L));
@@ -24,7 +24,7 @@ public class DummyPublisherTest extends AbstractPublisherTest{
 
       @Override
       public void onNext(Long n) {
-        sequence.add("onNext(" + n +") ok");
+        sequence.add("onNext(" + n + ") ok");
       }
 
       @Override
@@ -90,7 +90,7 @@ public class DummyPublisherTest extends AbstractPublisherTest{
 
   @Test
   public void shouldSetNPEOnNullDiscovery() throws InterruptedException {
-    DummyPublisher<Long> dummy = new DummyPublisher<>(new Long[]{ null });
+    DummyPublisher<Long> dummy = new DummyPublisher<>(new Long[]{null});
     AtomicReference<Throwable> error = new AtomicReference<>();
     CountDownLatch latch = new CountDownLatch(1);
 
@@ -121,7 +121,35 @@ public class DummyPublisherTest extends AbstractPublisherTest{
 
 
   @Test
-  public void shouldNotBustCallStackWithRecursiveCalls(){
+  public void shouldNotBustCallStackWithRecursiveCalls() throws InterruptedException {
+    DummyPublisher<Long> dummy = new DummyPublisher<>(generate(1000L));
+    CountDownLatch latch = new CountDownLatch(1);
 
+    dummy.subscribe(new Subscriber<>() {
+      Subscription subscription;
+
+      @Override
+      public void onSubscribe(Subscription s) {
+        this.subscription = s;
+        s.request(1);
+      }
+
+      @Override
+      public void onNext(Long aLong) {
+        subscription.request(1);
+        latch.countDown();
+      }
+
+      @Override
+      public void onError(Throwable t) {
+
+      }
+
+      @Override
+      public void onComplete() {
+
+      }
+    });
+    Assertions.assertThat(latch.await(1000, TimeUnit.MICROSECONDS)).isTrue();
   }
 }
