@@ -87,4 +87,41 @@ public class DummyPublisherTest extends AbstractPublisherTest{
     subscription[0].request(Long.MAX_VALUE);
     Assertions.assertThat(latch.await(1000, TimeUnit.MICROSECONDS)).isTrue();
   }
+
+  @Test
+  public void shouldThrowsNPEOnNullDiscovery() throws InterruptedException {
+    DummyPublisher<Long> dummy = new DummyPublisher<>(new Long[]{ null });
+    AtomicReference<Throwable> error = new AtomicReference<>();
+    CountDownLatch latch = new CountDownLatch(1);
+
+    dummy.subscribe(new Subscriber<>() {
+      @Override
+      public void onSubscribe(Subscription s) {
+        s.request(1);
+      }
+
+      @Override
+      public void onNext(Long aLong) {
+
+      }
+
+      @Override
+      public void onError(Throwable t) {
+        error.set(t);
+        latch.countDown();
+      }
+
+      @Override
+      public void onComplete() {
+      }
+    });
+    Assertions.assertThat(latch.await(1000, TimeUnit.MICROSECONDS)).isTrue();
+    Assertions.assertThat(error.get()).isInstanceOf(NullPointerException.class);
+  }
+
+  
+  @Test
+  public void shouldNotBustCallStackWithRecursiveCalls(){
+
+  }
 }
