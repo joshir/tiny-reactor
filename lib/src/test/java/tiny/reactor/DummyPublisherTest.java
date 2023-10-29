@@ -6,6 +6,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -222,5 +223,43 @@ public class DummyPublisherTest extends AbstractPublisherTest {
 
     Assertions.assertThat(latch.await(1, TimeUnit.SECONDS)).isTrue();
     Assertions.assertThat(error.get()).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void shouldRespondToRequestsFromAPoolOfThreadsWithCorrectNumberOfEmissions() throws InterruptedException {
+    long n = 1000;
+    Long[] generated = generate(n);
+    DummyPublisher<Long> dummy = new DummyPublisher<>(generated);
+    CountDownLatch latch = new CountDownLatch(1);
+    List<Long> collected = new ArrayList<>();
+    AtomicReference<Throwable> error = new AtomicReference<>();
+
+    dummy.subscribe(new Subscriber<>() {
+      Subscription subscription;
+      @Override
+      public void onSubscribe(Subscription s) {
+        this.subscription = s;
+        // call for 1000 objects from the common pool
+        for (int i = 0; i < n; i++)
+          ForkJoinPool.commonPool().execute(()-> s.request(1));
+      }
+
+      @Override
+      public void onNext(Long aLong) {
+        collected.add(aLong);
+      }
+
+      @Override
+      public void onError(Throwable t) {
+        error.set(t);
+      }
+
+      @Override
+      public void onComplete() {
+        latch.countDown();
+      }
+    });
+    Assertions.assertThat(latch.await(11000, TimeUnit.MILLISECONDS)).isFalse(); // onComplete signal is never fired
+    Assertions.assertThat(collected).containsExactly(generated);
   }
 }
