@@ -12,9 +12,15 @@ public class DummyPublisher<T> implements Publisher<T> {
     s.onSubscribe(new Subscription() {
       int index = 0;
       long received = 0l;
+      boolean canceled = false;
 
       @Override
       public void request(long n) {
+        if(n<=0 && !canceled) {
+          cancel();
+          s.onError(new IllegalArgumentException("request must not be non-positive"));
+          return;
+        }
         long init = received;
 
         received += n;
@@ -27,6 +33,8 @@ public class DummyPublisher<T> implements Publisher<T> {
 
         int i = 0;
         for (; i < received && index < arr.length; i++, index++) {
+          if(canceled)
+            return;
           T t = arr[index];
 
           if (t == null) {
@@ -45,6 +53,7 @@ public class DummyPublisher<T> implements Publisher<T> {
 
       @Override
       public void cancel() {
+        canceled = true;
       }
     });
   }

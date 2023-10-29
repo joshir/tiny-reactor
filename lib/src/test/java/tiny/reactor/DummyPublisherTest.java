@@ -38,7 +38,7 @@ public class DummyPublisherTest extends AbstractPublisherTest {
       }
     });
 
-    Assertions.assertThat(latch.await(1000, TimeUnit.MICROSECONDS)).isTrue();
+    Assertions.assertThat(latch.await(1000, TimeUnit.MILLISECONDS)).isTrue();
     Assertions.assertThat(sequence).containsExactly("onSubscribe() ok", "onNext(0) ok", "onNext(1) ok", "onNext(2) ok", "onComplete() ok");
   }
 
@@ -85,7 +85,7 @@ public class DummyPublisherTest extends AbstractPublisherTest {
     Assertions.assertThat(collected).containsExactly(0L, 1L, 2L, 3L);
 
     subscription[0].request(Long.MAX_VALUE);
-    Assertions.assertThat(latch.await(1000, TimeUnit.MICROSECONDS)).isTrue();
+    Assertions.assertThat(latch.await(1000, TimeUnit.MILLISECONDS)).isTrue();
   }
 
   @Test
@@ -115,7 +115,7 @@ public class DummyPublisherTest extends AbstractPublisherTest {
       public void onComplete() {
       }
     });
-    Assertions.assertThat(latch.await(1000, TimeUnit.MICROSECONDS)).isTrue();
+    Assertions.assertThat(latch.await(1000, TimeUnit.MILLISECONDS)).isTrue();
     Assertions.assertThat(error.get()).isInstanceOf(NullPointerException.class);
   }
 
@@ -137,7 +137,6 @@ public class DummyPublisherTest extends AbstractPublisherTest {
       @Override
       public void onNext(Long aLong) {
         subscription.request(1);
-        latch.countDown();
       }
 
       @Override
@@ -147,9 +146,81 @@ public class DummyPublisherTest extends AbstractPublisherTest {
 
       @Override
       public void onComplete() {
-
+        latch.countDown();
       }
     });
-    Assertions.assertThat(latch.await(1000, TimeUnit.MICROSECONDS)).isTrue();
+    Assertions.assertThat(latch.await(1000, TimeUnit.MILLISECONDS)).isTrue();
+  }
+
+  @Test
+  public void shouldRespectCancellationSignalWithNoMoreEmissionsAfterIt() throws InterruptedException {
+    DummyPublisher<Long> dummy = new DummyPublisher<>(generate(1000L));
+    CountDownLatch latch = new CountDownLatch(1);
+    List<Long> collected = new ArrayList<>();
+    AtomicReference<Throwable> error = new AtomicReference<>();
+
+    dummy.subscribe(new Subscriber<>() {
+      Subscription subscription;
+      @Override
+      public void onSubscribe(Subscription s) {
+        this.subscription = s;
+        s.cancel();
+        s.request(1);
+      }
+
+      @Override
+      public void onNext(Long aLong) {
+        collected.add(aLong);
+        subscription.request(1);
+      }
+
+      @Override
+      public void onError(Throwable t) {
+        error.set(t);
+      }
+
+      @Override
+      public void onComplete() {
+        latch.countDown();
+      }
+    });
+    Assertions.assertThat(latch.await(1000, TimeUnit.MILLISECONDS)).isFalse();
+    Assertions.assertThat(collected).isEmpty();
+  }
+
+  @Test
+  public void shouldHandleNonPositiveRequestsByCancellingAndSettingThrowable() throws InterruptedException {
+    DummyPublisher<Long> dummy = new DummyPublisher<>(generate(1000L));
+    CountDownLatch latch = new CountDownLatch(1);
+    List<Long> collected = new ArrayList<>();
+    AtomicReference<Throwable> error = new AtomicReference<>();
+
+    dummy.subscribe(new Subscriber<>() {
+      Subscription subscription;
+      @Override
+      public void onSubscribe(Subscription s) {
+        this.subscription = s;
+        s.request(-1);
+      }
+
+      @Override
+      public void onNext(Long aLong) {
+        collected.add(aLong);
+        subscription.request(1);
+      }
+
+      @Override
+      public void onError(Throwable t) {
+        error.set(t);
+        latch.countDown();
+      }
+
+      @Override
+      public void onComplete() {
+      }
+    });
+
+    Assertions.assertThat(latch.await(1, TimeUnit.SECONDS)).isTrue();
+    Assertions.assertThat(error.get()).isInstanceOf(IllegalArgumentException.class);
   }
 }
