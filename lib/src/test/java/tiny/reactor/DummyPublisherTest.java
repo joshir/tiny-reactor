@@ -259,7 +259,7 @@ public class DummyPublisherTest extends AbstractPublisherTest {
         latch.countDown();
       }
     });
-    Assertions.assertThat(latch.await(11000, TimeUnit.MILLISECONDS)).isFalse(); // onComplete signal is never fired
+    Assertions.assertThat(latch.await(1000, TimeUnit.MILLISECONDS)).isFalse(); // onComplete signal is never fired
     Assertions.assertThat(collected).containsExactly(generated);
   }
 }

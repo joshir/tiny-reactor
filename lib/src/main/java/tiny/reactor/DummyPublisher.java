@@ -28,6 +28,10 @@ public class DummyPublisher<T> implements Publisher<T> {
         if (init != 0) {
           // after the initial request, all other requests are immediately
           // returned after capturing the number of requested elements
+          // call stack never grows beyond request()->next()->request()
+          // as opposed to just letting the stack blow up to whatever size
+          // determined by n that has an upperbound of Long.MAX_VALUE but typically
+          // jvm stack busts in <1MB
           return;
         }
 
