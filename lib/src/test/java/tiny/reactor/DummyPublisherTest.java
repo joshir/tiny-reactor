@@ -239,7 +239,6 @@ public class DummyPublisherTest extends AbstractPublisherTest {
       @Override
       public void onSubscribe(Subscription s) {
         this.subscription = s;
-        // call for 1000 objects from the common pool
         for (int i = 0; i < n; i++)
           ForkJoinPool.commonPool().execute(()-> s.request(1));
       }

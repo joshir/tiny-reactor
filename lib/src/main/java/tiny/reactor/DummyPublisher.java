@@ -59,6 +59,9 @@ public class DummyPublisher<T> implements Publisher<T> {
           }
 
           if (received.addAndGet(-i) == 0) {
+            // one thread is "stealing requests" and dispatching
+            // onNext signals if received is not zero
+            // when received is zero, busy spinning is exited
             return;
           }
         }
