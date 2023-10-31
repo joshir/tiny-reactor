@@ -1,5 +1,8 @@
 package tiny.reactor;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
 public class DummyPublisher<T> implements Publisher<T> {
   private final T[] arr;
 
@@ -10,22 +13,21 @@ public class DummyPublisher<T> implements Publisher<T> {
   @Override
   public void subscribe(Subscriber<? super T> s) {
     s.onSubscribe(new Subscription() {
-      int index = 0;
-      long received = 0l;
+      AtomicInteger index = new AtomicInteger();
+      AtomicLong received = new AtomicLong();
       boolean canceled = false;
 
       @Override
       public void request(long n) {
-        if(n<=0 && !canceled) {
+        if (n <= 0 && !canceled) {
           cancel();
           s.onError(new IllegalArgumentException("request must not be non-positive"));
           return;
         }
-        long init = received;
 
-        received += n;
+        long init = received.getAndAdd(n);
 
-        if (init != 0) {
+        if (init > 0) {
           // after the initial request, all other requests are immediately
           // returned after capturing the number of requested elements
           // call stack never grows beyond request()->next()->request()
@@ -35,24 +37,31 @@ public class DummyPublisher<T> implements Publisher<T> {
           return;
         }
 
-        int i = 0;
-        for (; i < received && index < arr.length; i++, index++) {
-          if(canceled)
-            return;
-          T t = arr[index];
+        while (true) {
+          int i = 0;
+          for (; i < received.get() && index.get() < arr.length; i++, index.incrementAndGet()) {
+            if (canceled)
+              return;
 
-          if (t == null) {
-            s.onError(new NullPointerException("element must not be null"));
+            T t = arr[index.get()];
+
+            if (t == null) {
+              s.onError(new NullPointerException("element must not be null"));
+              return;
+            }
+
+            s.onNext(t);
+          }
+
+          if (index.get() == arr.length) {
+            s.onComplete();
             return;
           }
 
-          s.onNext(t);
+          if (received.addAndGet(-i) == 0) {
+            return;
+          }
         }
-
-        if (index == arr.length)
-          s.onComplete();
-
-        received -= i;
       }
 
       @Override
