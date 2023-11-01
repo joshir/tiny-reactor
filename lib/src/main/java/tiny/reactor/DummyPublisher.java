@@ -16,6 +16,7 @@ public class DummyPublisher<T> implements Publisher<T> {
       AtomicInteger index = new AtomicInteger();
       AtomicLong received = new AtomicLong();
       boolean canceled = false;
+      long init;
 
       @Override
       public void request(long n) {
@@ -25,7 +26,16 @@ public class DummyPublisher<T> implements Publisher<T> {
           return;
         }
 
-        long init = received.getAndAdd(n);
+        do {
+          init = received.get();
+          if(init == Long.MAX_VALUE)
+            return;
+          n += init;
+          // check if some other thread has made changes in the meantime
+          // and try again until n can safely be added
+          // CAS is better than synchronized by a factor of 10
+        } while(!received.compareAndSet(init, n));
+
 
         if (init > 0) {
           // after the initial request, all other requests are immediately
