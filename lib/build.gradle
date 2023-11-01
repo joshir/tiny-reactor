@@ -28,7 +28,15 @@ test {
 
 // Apply a specific Java toolchain to ease working on different environments.
 java {
+    withSourcesJar()
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+tasks.named('jar') {
+    manifest {
+        attributes('Implementation-Title': project.name,
+                'Implementation-Version': project.version)
     }
 }
