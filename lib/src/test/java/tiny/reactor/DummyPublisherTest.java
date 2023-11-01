@@ -261,4 +261,40 @@ public class DummyPublisherTest extends AbstractPublisherTest {
     Assertions.assertThat(latch.await(1000, TimeUnit.MILLISECONDS)).isTrue();
     Assertions.assertThat(collected).containsExactly(generated);
   }
+
+  @Test
+  public void shouldSendAllElementsOnLongMaxValue() throws InterruptedException {
+    long n = 1000;
+    Long[] generated = generate(n);
+    DummyPublisher<Long> dummy = new DummyPublisher<>(generated);
+    CountDownLatch latch = new CountDownLatch(1);
+    List<Long> collected = new ArrayList<>();
+    AtomicReference<Throwable> error = new AtomicReference<>();
+
+    dummy.subscribe(new Subscriber<>() {
+      Subscription subscription;
+      @Override
+      public void onSubscribe(Subscription s) {
+        this.subscription = s;
+        s.request(Long.MAX_VALUE);
+      }
+
+      @Override
+      public void onNext(Long aLong) {
+        collected.add(aLong);
+      }
+
+      @Override
+      public void onError(Throwable t) {
+        error.set(t);
+      }
+
+      @Override
+      public void onComplete() {
+        latch.countDown();
+      }
+    });
+    Assertions.assertThat(latch.await(1000, TimeUnit.MILLISECONDS)).isTrue();
+    Assertions.assertThat(collected).containsExactly(generated);
+  }
 }
