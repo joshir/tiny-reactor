@@ -14,3 +14,4 @@ plugins {
 
 rootProject.name = 'tiny-reactor'
 include('core')
+include('operators')
