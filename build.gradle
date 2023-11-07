@@ -1,0 +1,39 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'tiny.reactor'
+version = 'unspecified'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation("org.assertj:assertj-core:3.11.1")
+}
+
+test {
+    useJUnitPlatform()
+}
+
+
+test {
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+}
+
+// Apply a specific Java toolchain to ease working on different environments.
+java {
+    withSourcesJar()
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+tasks.named('jar') {
+    manifest {
+        attributes('Implementation-Title': project.name,
+                'Implementation-Version': project.version)
+    }
+}
