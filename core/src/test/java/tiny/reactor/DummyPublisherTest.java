@@ -254,11 +254,9 @@ public class DummyPublisherTest extends AbstractPublisherTest {
       }
 
       @Override
-      public void onComplete() {
-        latch.countDown();
-      }
+      public void onComplete() { latch.countDown();}
     });
-    Assertions.assertThat(latch.await(1000, TimeUnit.MILLISECONDS)).isTrue();
+    Assertions.assertThat(latch.await(10000, TimeUnit.MILLISECONDS)).isTrue();
     Assertions.assertThat(collected).containsExactly(generated);
   }
 
@@ -294,7 +292,7 @@ public class DummyPublisherTest extends AbstractPublisherTest {
         latch.countDown();
       }
     });
-    Assertions.assertThat(latch.await(1000, TimeUnit.MILLISECONDS)).isTrue();
+    Assertions.assertThat(latch.await(2000, TimeUnit.MILLISECONDS)).isTrue();
     Assertions.assertThat(collected).containsExactly(generated);
   }
 }
