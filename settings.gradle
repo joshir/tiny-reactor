@@ -13,4 +13,4 @@ plugins {
 }
 
 rootProject.name = 'tiny-reactor'
-include('lib')
+include('core')
